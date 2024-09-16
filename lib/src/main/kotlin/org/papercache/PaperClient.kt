@@ -170,7 +170,7 @@ class PaperClient(paper_addr: String) {
 			this.tcp_client = Socket(this.host, this.port)
 
 			if (this.auth_token != null) {
-				// TODO
+				this.auth(this.auth_token);
 			}
 
 			return true
