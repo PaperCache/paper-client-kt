@@ -6,23 +6,30 @@ class AuthTest: PaperClientTest(false) {
 		val client = this.client
 		if (client == null) fail()
 
-		assertFalse(client.set("key", "value").is_ok())
+		val set_err = assertFailsWith<PaperError> {
+			client.set("key", "value")
+		}
 
-		val response = client.auth("incorrect_auth_token")
-		assertFalse(response.is_ok())
+		assertEquals(set_err.type, PaperError.Type.UNAUTHORIZED)
 
-		assertFalse(client.set("key", "value").is_ok())
+		val auth_err = assertFailsWith<PaperError> {
+			client.auth("incorrect_auth_token")
+		}
+
+		assertEquals(auth_err.type, PaperError.Type.UNAUTHORIZED)
     }
 
 	@Test fun correct() {
 		val client = this.client
 		if (client == null) fail()
 
-		assertFalse(client.set("key", "value").is_ok())
+		val set_err = assertFailsWith<PaperError> {
+			client.set("key", "value")
+		}
 
-		val response = client.auth("auth_token")
-		assertTrue(response.is_ok())
+		assertEquals(set_err.type, PaperError.Type.UNAUTHORIZED)
 
-		assertTrue(client.set("key", "value").is_ok())
+		client.auth("auth_token")
+		client.set("key", "value")
     }
 }

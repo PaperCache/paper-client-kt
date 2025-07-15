@@ -6,16 +6,13 @@ class WipeTest: PaperClientTest() {
 		val client = this.client
 		if (client == null) fail()
 
-		assertTrue(client.set("key", "value").is_ok())
+		client.set("key", "value")
+        client.wipe()
 
-		val response = client.wipe()
-		assertTrue(response.is_ok())
-		assertNotNull(response.data())
-		assertNull(response.err_data())
+        val err = assertFailsWith<PaperError> {
+            client.get("key")
+        }
 
-		val got = client.get("key")
-		assertFalse(got.is_ok())
-		assertNull(got.data())
-		assertNotNull(got.err_data())
+        assertEquals(err.type, PaperError.Type.KEY_NOT_FOUND)
     }
 }

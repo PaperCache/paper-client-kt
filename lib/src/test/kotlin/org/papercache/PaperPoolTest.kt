@@ -10,10 +10,7 @@ class PaperPoolTest {
 			val client = lockable_client.lock()
 
 			val response = client.ping()
-
-			assertTrue(response.is_ok())
-			assertEquals("pong", response.data())
-			assertNull(response.err_data())
+			assertEquals("pong", response)
 
 			lockable_client.unlock()
 		}
@@ -31,10 +28,14 @@ class PaperPoolTest {
 		val lockable_client: LockableClient = pool.client()
 		val client = lockable_client.lock()
 
-		val response = client.set("key", "value")
+		try {
+			client.set("key", "value")
+			lockable_client.unlock()
 
-		lockable_client.unlock()
-
-		return response.is_ok()
+			return true
+		} catch (err: Exception) {
+			lockable_client.unlock()
+			return false
+		}
 	}
 }

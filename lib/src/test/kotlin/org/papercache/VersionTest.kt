@@ -6,10 +6,7 @@ class VersionTest: PaperClientTest() {
 		val client = this.client
 		if (client == null) fail()
 
-		val response = client.version()
-
-		assertTrue(response.is_ok())
-		assertNotNull(response.data())
-		assertNull(response.err_data())
+		val version = client.version()
+		assertNotNull(version)
     }
 }

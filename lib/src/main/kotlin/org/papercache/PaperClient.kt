@@ -16,7 +16,7 @@ class PaperClient(paper_addr: String) {
 
 	init {
 		if (!paper_addr.startsWith("paper://")) {
-			throw PaperError("Invalid Paper address.")
+			throw PaperError(PaperError.Type.INVALID_ADDRESS)
 		}
 
 		val parsed = paper_addr
@@ -24,7 +24,7 @@ class PaperClient(paper_addr: String) {
 			.split(':')
 
 		if (parsed.size != 2) {
-			throw PaperError("Invalid Paper address.")
+			throw PaperError(PaperError.Type.INVALID_ADDRESS)
 		}
 
 		this.host = parsed[0]
@@ -35,8 +35,9 @@ class PaperClient(paper_addr: String) {
 
 		try {
 			this.tcp_client = Socket(this.host, this.port)
+			this.handshake();
 		} catch (err: Exception) {
-			throw PaperError("Could not connect to PaperServer")
+			throw PaperError(PaperError.Type.CONNECTION_REFUSED)
 		}
 	}
 
@@ -44,25 +45,25 @@ class PaperClient(paper_addr: String) {
 		try {
 			this.tcp_client.close()
 		} catch (err: Exception) {
-			throw PaperError("Could not disconnect from PaperServer")
+			throw PaperError(PaperError.Type.INTERNAL)
 		}
 	}
 
-	fun ping(): PaperResposnse<String> {
+	fun ping(): String {
 		var writer: SheetWriter = SheetWriter()
 		writer.write_u8(CommandByte.PING.value)
 
-		return this.process(writer)
+		return this.process_data(writer)
 	}
 
-	fun version(): PaperResposnse<String> {
+	fun version(): String {
 		var writer: SheetWriter = SheetWriter()
 		writer.write_u8(CommandByte.VERSION.value)
 
-		return this.process(writer)
+		return this.process_data(writer)
 	}
 
-	fun auth(token: String): PaperResposnse<String> {
+	fun auth(token: String) {
 		var writer: SheetWriter = SheetWriter()
 		writer.write_u8(CommandByte.AUTH.value)
 		writer.write_string(token)
@@ -70,15 +71,15 @@ class PaperClient(paper_addr: String) {
 		return this.process(writer)
 	}
 
-	fun get(key: String): PaperResposnse<String> {
+	fun get(key: String): String {
 		var writer: SheetWriter = SheetWriter()
 		writer.write_u8(CommandByte.GET.value)
 		writer.write_string(key)
 
-		return this.process(writer)
+		return this.process_data(writer)
 	}
 
-	fun set(key: String, value: String, ttl: Long = 0): PaperResposnse<String> {
+	fun set(key: String, value: String, ttl: UInt = 0U) {
 		var writer: SheetWriter = SheetWriter()
 		writer.write_u8(CommandByte.SET.value)
 		writer.write_string(key)
@@ -88,7 +89,7 @@ class PaperClient(paper_addr: String) {
 		return this.process(writer)
 	}
 
-	fun del(key: String): PaperResposnse<String> {
+	fun del(key: String) {
 		var writer: SheetWriter = SheetWriter()
 		writer.write_u8(CommandByte.DEL.value)
 		writer.write_string(key)
@@ -96,7 +97,7 @@ class PaperClient(paper_addr: String) {
 		return this.process(writer)
 	}
 
-	fun has(key: String): PaperResposnse<Boolean> {
+	fun has(key: String): Boolean {
 		var writer: SheetWriter = SheetWriter()
 		writer.write_u8(CommandByte.HAS.value)
 		writer.write_string(key)
@@ -104,15 +105,15 @@ class PaperClient(paper_addr: String) {
 		return this.process_has(writer)
 	}
 
-	fun peek(key: String): PaperResposnse<String> {
+	fun peek(key: String): String {
 		var writer: SheetWriter = SheetWriter()
 		writer.write_u8(CommandByte.PEEK.value)
 		writer.write_string(key)
 
-		return this.process(writer)
+		return this.process_data(writer)
 	}
 
-	fun ttl(key: String, ttl: Long = 0): PaperResposnse<String> {
+	fun ttl(key: String, ttl: UInt = 0U) {
 		var writer: SheetWriter = SheetWriter()
 		writer.write_u8(CommandByte.TTL.value)
 		writer.write_string(key)
@@ -121,7 +122,7 @@ class PaperClient(paper_addr: String) {
 		return this.process(writer)
 	}
 
-	fun size(key: String): PaperResposnse<Long> {
+	fun size(key: String): UInt {
 		var writer: SheetWriter = SheetWriter()
 		writer.write_u8(CommandByte.SIZE.value)
 		writer.write_string(key)
@@ -129,14 +130,14 @@ class PaperClient(paper_addr: String) {
 		return this.process_size(writer)
 	}
 
-	fun wipe(): PaperResposnse<String> {
+	fun wipe() {
 		var writer: SheetWriter = SheetWriter()
 		writer.write_u8(CommandByte.WIPE.value)
 
 		return this.process(writer)
 	}
 
-	fun resize(size: Long): PaperResposnse<String> {
+	fun resize(size: ULong) {
 		var writer: SheetWriter = SheetWriter()
 		writer.write_u8(CommandByte.RESIZE.value)
 		writer.write_u64(size)
@@ -144,19 +145,28 @@ class PaperClient(paper_addr: String) {
 		return this.process(writer)
 	}
 
-	fun policy(policy: PaperPolicy): PaperResposnse<String> {
+	fun policy(policy: String) {
 		var writer: SheetWriter = SheetWriter()
 		writer.write_u8(CommandByte.POLICY.value)
-		writer.write_u8(policy.value)
+		writer.write_string(policy)
 
 		return this.process(writer)
 	}
 
-	fun stats(): PaperResposnse<PaperStats> {
+	fun status(): PaperStatus {
 		var writer: SheetWriter = SheetWriter()
-		writer.write_u8(CommandByte.STATS.value)
+		writer.write_u8(CommandByte.STATUS.value)
 
-		return this.process_stats(writer)
+		return this.process_status(writer)
+	}
+
+	private fun handshake(): Boolean {
+		try {
+			val reader: SheetReader = SheetReader(this.tcp_client.getInputStream())
+			return reader.read_bool()
+		} catch (err: Exception) {
+			throw PaperError(PaperError.Type.CONNECTION_REFUSED)
+		}
 	}
 
 	private fun reconnect(): Boolean {
@@ -179,7 +189,7 @@ class PaperClient(paper_addr: String) {
 		}
 	}
 
-	private fun process(writer: SheetWriter): PaperResposnse<String> {
+	private fun process(writer: SheetWriter) {
 		try {
 			var output_stream: OutputStream = this.tcp_client.getOutputStream()
 			writer.send(output_stream)
@@ -187,24 +197,19 @@ class PaperClient(paper_addr: String) {
 			val reader: SheetReader = SheetReader(this.tcp_client.getInputStream())
 
 			val is_ok: Boolean = reader.read_bool()
-			val data: String = reader.read_string()
+			if (!is_ok) throw PaperError.from_reader(reader)
 
 			this.reconnect_attempts = 0
-
-			return when (is_ok) {
-				true -> PaperResposnse<String>(data)
-				false -> PaperResposnse<String>(null, data)
-			}
-		} catch (err: Exception) {
+		} catch (err: IOException) {
 			if (!this.reconnect()) {
-				throw PaperError("Could not reconnect to server.")
+				throw PaperError(PaperError.Type.DISCONNECTED)
 			}
 
-			return this.process(writer)
+			this.process(writer)
 		}
 	}
 
-	private fun process_has(writer: SheetWriter): PaperResposnse<Boolean> {
+	private fun process_data(writer: SheetWriter): String {
 		try {
 			var output_stream: OutputStream = this.tcp_client.getOutputStream()
 			writer.send(output_stream)
@@ -212,23 +217,45 @@ class PaperClient(paper_addr: String) {
 			val reader: SheetReader = SheetReader(this.tcp_client.getInputStream())
 
 			val is_ok: Boolean = reader.read_bool()
+			if (!is_ok) throw PaperError.from_reader(reader)
 
+			val data: String = reader.read_string()
 			this.reconnect_attempts = 0
 
-			return when (is_ok) {
-				true -> PaperResposnse<Boolean>(reader.read_bool())
-				false -> PaperResposnse<Boolean>(null, reader.read_string())
-			}
-		} catch (err: Exception) {
+			return data
+		} catch (err: IOException) {
 			if (!this.reconnect()) {
-				throw PaperError("Could not reconnect to server.")
+				throw PaperError(PaperError.Type.DISCONNECTED)
+			}
+
+			return this.process_data(writer)
+		}
+	}
+
+	private fun process_has(writer: SheetWriter): Boolean {
+		try {
+			var output_stream: OutputStream = this.tcp_client.getOutputStream()
+			writer.send(output_stream)
+
+			val reader: SheetReader = SheetReader(this.tcp_client.getInputStream())
+
+			val is_ok: Boolean = reader.read_bool()
+			if (!is_ok) throw PaperError.from_reader(reader)
+
+			val has = reader.read_bool()
+			this.reconnect_attempts = 0
+
+			return has
+		} catch (err: IOException) {
+			if (!this.reconnect()) {
+				throw PaperError(PaperError.Type.DISCONNECTED)
 			}
 
 			return this.process_has(writer)
 		}
 	}
 
-	private fun process_size(writer: SheetWriter): PaperResposnse<Long> {
+	private fun process_size(writer: SheetWriter): UInt {
 		try {
 			var output_stream: OutputStream = this.tcp_client.getOutputStream()
 			writer.send(output_stream)
@@ -236,23 +263,22 @@ class PaperClient(paper_addr: String) {
 			val reader: SheetReader = SheetReader(this.tcp_client.getInputStream())
 
 			val is_ok: Boolean = reader.read_bool()
+			if (!is_ok) throw PaperError.from_reader(reader)
 
+			val size = reader.read_u32()
 			this.reconnect_attempts = 0
 
-			return when (is_ok) {
-				true -> PaperResposnse<Long>(reader.read_u64())
-				false -> PaperResposnse<Long>(null, reader.read_string())
-			}
-		} catch (err: Exception) {
+			return size
+		} catch (err: IOException) {
 			if (!this.reconnect()) {
-				throw PaperError("Could not reconnect to server.")
+				throw PaperError(PaperError.Type.DISCONNECTED)
 			}
 
 			return this.process_size(writer)
 		}
 	}
 
-	private fun process_stats(writer: SheetWriter): PaperResposnse<PaperStats> {
+	private fun process_status(writer: SheetWriter): PaperStatus {
 		try {
 			var output_stream: OutputStream = this.tcp_client.getOutputStream()
 			writer.send(output_stream)
@@ -260,15 +286,18 @@ class PaperClient(paper_addr: String) {
 			val reader: SheetReader = SheetReader(this.tcp_client.getInputStream())
 
 			val is_ok: Boolean = reader.read_bool()
+			if (!is_ok) throw PaperError.from_reader(reader)
 
 			this.reconnect_attempts = 0
 
-			if (!is_ok) {
-				return PaperResposnse<PaperStats>(null, reader.read_string())
-			}
+			val pid = reader.read_u32()
 
 			val max_size = reader.read_u64()
 			val used_size = reader.read_u64()
+			val num_objects = reader.read_u64()
+
+			val rss = reader.read_u64()
+			val hwm = reader.read_u64()
 
 			val total_gets = reader.read_u64()
 			val total_sets = reader.read_u64()
@@ -276,12 +305,27 @@ class PaperClient(paper_addr: String) {
 
 			val miss_ratio = reader.read_f64()
 
-			val policy_byte = reader.read_u8()
+			val num_policies = reader.read_u32().toInt()
+			var policies: Array<String> = Array(num_policies) { "" }
+
+			for (i in 0..num_policies - 1) {
+				policies[i] = reader.read_string()
+			}
+
+			val policy = reader.read_string()
+			val is_auto_policy = reader.read_bool()
+
 			val uptime = reader.read_u64()
 
-			val stats: PaperStats = PaperStats(
+			val status: PaperStatus = PaperStatus(
+				pid,
+				
 				max_size,
 				used_size,
+				num_objects,
+
+				rss,
+				hwm,
 
 				total_gets,
 				total_sets,
@@ -289,17 +333,20 @@ class PaperClient(paper_addr: String) {
 
 				miss_ratio,
 
-				policy_byte,
+				policies,
+				policy,
+				is_auto_policy,
+				
 				uptime,
 			)
 
-			return PaperResposnse<PaperStats>(stats)
-		} catch (err: Exception) {
+			return status
+		} catch (err: IOException) {
 			if (!this.reconnect()) {
-				throw PaperError("Could not reconnect to server.")
+				throw PaperError(PaperError.Type.DISCONNECTED)
 			}
 
-			return this.process_stats(writer)
+			return this.process_status(writer)
 		}
 	}
 }
@@ -324,5 +371,5 @@ enum class CommandByte(val value: Byte) {
 	RESIZE(11),
 	POLICY(12),
 
-	STATS(13),
+	STATUS(13),
 }

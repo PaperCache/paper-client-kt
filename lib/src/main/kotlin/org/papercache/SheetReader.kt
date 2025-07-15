@@ -17,22 +17,22 @@ class SheetReader(tcp_stream: InputStream) {
 		return this.read_u8() == 33.toByte()
 	}
 
-	fun read_u32(): Long {
+	fun read_u32(): UInt {
 		var bytes: ByteArray = ByteArray(4)
 		this.tcp_stream.read(bytes)
 
 		var buf: ByteBuffer = ByteBuffer.wrap(bytes)
 		buf.order(ByteOrder.LITTLE_ENDIAN)
-		return buf.getInt().toLong()
+		return buf.getInt().toUInt()
 	}
 
-	fun read_u64(): Long {
+	fun read_u64(): ULong {
 		var bytes: ByteArray = ByteArray(8)
 		this.tcp_stream.read(bytes)
 
 		var buf: ByteBuffer = ByteBuffer.wrap(bytes)
 		buf.order(ByteOrder.LITTLE_ENDIAN)
-		return buf.getInt().toLong()
+		return buf.getInt().toULong()
 	}
 
 	fun read_f64(): Double {
@@ -45,7 +45,7 @@ class SheetReader(tcp_stream: InputStream) {
 	}
 
 	fun read_string(): String {
-		val size: Long = this.read_u32()
+		val size: UInt = this.read_u32()
 		var buf: ByteArray = ByteArray(size.toInt())
 
 		this.tcp_stream.read(buf)

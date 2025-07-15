@@ -6,32 +6,21 @@ class PolicyTest: PaperClientTest() {
 		val client = this.client
 		if (client == null) fail()
 
-		val initial_policy = PaperPolicy.LFU
-		val updated_policy = PaperPolicy.FIFO
+		val initial_policy = "lru";
+		val updated_policy = "lfu";
 
-		val initial_response = client.policy(initial_policy)
-		assertTrue(initial_response.is_ok())
-		assertNotNull(initial_response.data())
-		assertNull(initial_response.err_data())
-
+		client.policy(initial_policy)
 		assertEquals(initial_policy, this.get_cache_policy())
 
-		val updated_response = client.policy(updated_policy)
-		assertTrue(updated_response.is_ok())
-		assertNotNull(updated_response.data())
-		assertNull(updated_response.err_data())
-
+		client.policy(updated_policy)
 		assertEquals(updated_policy, this.get_cache_policy())
     }
 
-	private fun get_cache_policy(): PaperPolicy {
+	private fun get_cache_policy(): String {
 		val client = this.client
 		if (client == null) fail()
 
-		val response = client.stats()
-		val stats = response.data()
-		if (stats == null) fail(response.err_data())
-
-		return stats.policy
+		val status = client.status()
+		return status.policy
 	}
 }

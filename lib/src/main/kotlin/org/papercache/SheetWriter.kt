@@ -10,7 +10,7 @@ class SheetWriter() {
 		this.buf.add(value)
 	}
 
-	fun write_u32(value: Long) {
+	fun write_u32(value: UInt) {
 		var bytes: ByteArray = ByteArray(4)
 
 		var buf: ByteBuffer = ByteBuffer.wrap(bytes)
@@ -22,12 +22,12 @@ class SheetWriter() {
 		}
 	}
 
-	fun write_u64(value: Long) {
+	fun write_u64(value: ULong) {
 		var bytes: ByteArray = ByteArray(8)
 
 		var buf: ByteBuffer = ByteBuffer.wrap(bytes)
 		buf.order(ByteOrder.LITTLE_ENDIAN)
-		buf.putLong(value)
+		buf.putLong(value.toLong())
 
 		for (b in bytes) {
 			this.buf.add(b)
@@ -35,7 +35,7 @@ class SheetWriter() {
 	}
 
 	fun write_string(value: String) {
-		this.write_u32(value.length.toLong())
+		this.write_u32(value.length.toUInt())
 
 		for (b in value.toByteArray()) {
 			this.buf.add(b)

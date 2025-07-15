@@ -6,43 +6,31 @@ class SetTest: PaperClientTest() {
 		val client = this.client
 		if (client == null) fail()
 
-		val response = client.set("key", "value")
-
-		assertTrue(response.is_ok())
-		assertNotNull(response.data())
-		assertNull(response.err_data())
+		client.set("key", "value")
     }
 
     @Test fun ttl() {
 		val client = this.client
 		if (client == null) fail()
 
-		val response = client.set("key", "value", 2)
-
-		assertTrue(response.is_ok())
-		assertNotNull(response.data())
-		assertNull(response.err_data())
+		client.set("key", "value", 2U)
     }
 
 	@Test fun expiry() {
 		val client = this.client
 		if (client == null) fail()
 
-		val response = client.set("key", "value", 1)
-		assertTrue(response.is_ok())
-		assertNotNull(response.data())
-		assertNull(response.err_data())
+		client.set("key", "value", 1U)
 
-		val get_response = client.get("key")
-		assertTrue(get_response.is_ok())
-		assertEquals("value", get_response.data())
-		assertNull(get_response.err_data())
+		val got = client.get("key")
+		assertEquals("value", got)
 
 		Thread.sleep(2000);
 
-		val expired_response = client.get("key")
-		assertFalse(expired_response.is_ok())
-		assertNull(expired_response.data())
-		assertNotNull(expired_response.err_data())
+		val err = assertFailsWith<PaperError> {
+			client.get("key")
+		}
+
+		assertEquals(err.type, PaperError.Type.KEY_NOT_FOUND)
     }
 }

@@ -11,9 +11,8 @@ open class PaperClientTest(authed: Boolean = true) {
 
 		if (this.authed) {
 			client.auth("auth_token")
+			client.wipe()
 		}
-
-		client.wipe()
 
 		this.client = client
 	}

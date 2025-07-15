@@ -7,9 +7,6 @@ class PingTest: PaperClientTest() {
 		if (client == null) fail()
 
 		val response = client.ping()
-
-		assertTrue(response.is_ok())
-		assertEquals("pong", response.data())
-		assertNull(response.err_data())
+		assertEquals("pong", response)
     }
 }
