@@ -1,13 +1,20 @@
+/*
+ * Copyright (c) Kia Shakiba
+ *
+ * This source code is licensed under the GNU AGPLv3 license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import kotlin.test.Test
 import kotlin.test.*
 
-class PeekTest: PaperClientTest() {
+class SizeTest: PaperClientTest() {
     @Test fun non_existent() {
 		val client = this.client
 		if (client == null) fail()
 
         val err = assertFailsWith<PaperError> {
-            client.peek("key")
+            client.size("key")
         }
 
         assertEquals(err.type, PaperError.Type.KEY_NOT_FOUND)
@@ -18,8 +25,8 @@ class PeekTest: PaperClientTest() {
 		if (client == null) fail()
 
 		client.set("key", "value")
-		val got = client.peek("key")
 
-		assertEquals("value", got)
+		val size = client.size("key")
+		assertTrue(size > 0U)
     }
 }

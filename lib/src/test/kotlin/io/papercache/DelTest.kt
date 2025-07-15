@@ -1,13 +1,20 @@
+/*
+ * Copyright (c) Kia Shakiba
+ *
+ * This source code is licensed under the GNU AGPLv3 license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import kotlin.test.Test
 import kotlin.test.*
 
-class TtlTest: PaperClientTest() {
+class DelTest: PaperClientTest() {
     @Test fun non_existent() {
 		val client = this.client
 		if (client == null) fail()
 
         val err = assertFailsWith<PaperError> {
-            client.ttl("key")
+            client.del("key")
         }
 
         assertEquals(err.type, PaperError.Type.KEY_NOT_FOUND)
@@ -18,6 +25,6 @@ class TtlTest: PaperClientTest() {
 		if (client == null) fail()
 
 		client.set("key", "value")
-		client.ttl("key", 1U)
+        client.del("key")
     }
 }
